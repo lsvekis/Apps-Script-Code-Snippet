@@ -1,0 +1,637 @@
+Simple Math Operations (1–10)
+ADD_TWO(a,b)                          
+ function  ADD_TWO(a, b) {
+return a + b;
+}
+Returns a + b.
+SUBTRACT(a,b)                         
+  function  SUBTRACT(a, b) {
+return a - b;
+}
+Returns a − b.
+MULTIPLY(a,b)                          
+ function  MULTIPLY(a, b) {
+return a * b;
+}
+Returns a × b.
+DIVIDE(a,b)                         
+ function  DIVIDE(a, b) {
+return b === 0 ? '#DIV/0!' : a / b;
+}
+Returns a ÷ b or error on divide‑by‑zero.
+POWER(a,b)                          
+ function  POWER(a, b) {
+return Math.pow(a, b);
+}
+Returns aᵇ.
+MODULO(a,b)                          
+ function  MODULO(a, b) {
+return a % b;
+}
+Returns remainder of a÷b.
+SQRT_CUSTOM(x)                          
+ function  SQRT_CUSTOM(x) {
+return x < 0 ? '#NUM!' : Math.sqrt(x);
+}
+Returns √x or error if x<0.
+ABS_CUSTOM(x)                          
+ function  ABS_CUSTOM(x) {
+return Math.abs(x);
+}
+Returns absolute value.
+MAX_OF_TWO(a,b)                         
+  function  MAX_OF_TWO(a, b) {
+return a > b ? a : b;
+}
+Returns the larger of a,b.
+MIN_OF_TWO(a,b)                           
+function  MIN_OF_TWO(a, b) {
+return a < b ? a : b;
+}
+Returns the smaller of a,b.
+2. Text Manipulation (11–20)
+REVERSE_TEXT(input)                         
+  function  REVERSE_TEXT(input) {
+return String(input).split('').reverse().join('');
+}
+Reverses a string.
+TO_UPPER(input)                          
+ function  TO_UPPER(input) {
+return String(input).toUpperCase();
+}
+Converts to uppercase.
+TO_LOWER(input)                          
+ function  TO_LOWER(input) {
+return String(input).toLowerCase();
+}
+Converts to lowercase.
+PROPER_CASE(input)                           
+function  PROPER_CASE(input) {
+return String(input).toLowerCase()
+.split(' ')
+.map(w=> w.charAt(0).toUpperCase()+w.slice(1))
+.join(' ');
+}
+Title‑cases each word.
+CONCAT_WITH_SPACE(a,b)                          
+ function  CONCAT_WITH_SPACE(a, b) {
+return String(a) + ' ' + String(b);
+}
+Joins two values with a space.
+SPLIT_BY_DELIM(text,delim)                          
+ function  SPLIT_BY_DELIM(text, delim) {
+return String(text).split(String(delim));
+}
+Splits text by delimiter.
+TEXT_LENGTH(text)                           
+function  TEXT_LENGTH(text) {
+return String(text).length;
+}
+Returns string length.
+FIND_SUBSTRING(text,sub)                          
+ function  FIND_SUBSTRING(text, sub) {
+return String(text).indexOf(String(sub)) + 1;
+}
+1‑based position of sub in text, 0 if not found.
+SUBSTITUTE_TEXT(text,old,newText)                          
+ function  SUBSTITUTE_TEXT(text, old, newText) {
+return String(text).split(String(old)).join(String(newText));
+}
+Replaces all occurrences.
+TRIM_SPACES(text)                          
+ function  TRIM_SPACES(text) {
+return String(text).trim();
+}
+Removes leading/trailing spaces.
+3. Date & Time (21–30)
+DAYS_BETWEEN(start,end)
+function  DAYS_BETWEEN(start, end) {
+return (new Date(end) - new Date(start)) / 86400000;
+}
+Days difference.
+TODAY_PLUS_DAYS(n)                           
+function  TODAY_PLUS_DAYS(n) {
+var d = new Date();
+d.setDate(d.getDate()+n);
+return d;
+}
+Date n days from today.
+WEEKDAY_NAME(date)                           
+function  WEEKDAY_NAME(date) {
+return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date(date).getDay()];
+}
+Day name.
+IS_WEEKEND(date)                          
+ function  IS_WEEKEND(date) {
+var d=new Date(date).getDay();
+return d===0||d===6;
+}
+TRUE if Sat/Sun.
+ADD_BUSINESS_DAYS(date,n)                           
+function  ADD_BUSINESS_DAYS(date,n){
+var d=new Date(date), added=0;
+while(added<n){
+d.setDate(d.getDate()+1);
+if(d.getDay()!==0 && d.getDay()!==6) added++;
+}
+return d;
+}
+Add n weekdays.
+NETWORKDAYS(start,end)                           
+function  NETWORKDAYS(start,end){
+var s=new Date(start), e=new Date(end), count=0;
+while(s<=e){
+if(s.getDay()>0 && s.getDay()<6) count++;
+s.setDate(s.getDate()+1);
+}
+return count;
+}
+Count weekdays.
+MONTH_NAME(date)                          
+ function  MONTH_NAME(date){
+return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][new Date(date).getMonth()];
+}
+Abbreviated month.
+YEAR_FRACTION(start,end)                           
+function  YEAR_FRACTION(start,end){
+return (new Date(end)-new Date(start))/(365*86400000);
+}
+Fractional years.
+WEEKNUM_ISO(date)                          
+ function  WEEKNUM_ISO(date){
+var d=new Date(date);
+d.setHours(0,0,0,0);
+d.setDate(d.getDate()+4-(d.getDay()||7));
+return Math.ceil((((d-new Date(d.getFullYear(),0,1))/86400000)+1)/7);
+}
+ISO week number.
+TIME_DIFF_HOURS(t1,t2)                          
+ function  TIME_DIFF_HOURS(t1,t2){
+return (new Date(t2)-new Date(t1))/(3600000);
+}
+Hours difference.
+4. Lookup & Reference (31–40)
+VLOOKUP_CASE_INSENSITIVE(key,range,index)                           
+function  VLOOKUP_CASE_INSENSITIVE(searchKey, range, index) {
+searchKey=String(searchKey).toLowerCase();
+var vals=range.getValues();
+for(var i=0;i<vals.length;i++){
+if(String(vals[i][0]).toLowerCase()===searchKey) return vals[i][index-1];
+}
+return '#N/A';
+}
+Case‑insensitive VLOOKUP.
+HLOOKUP_CUSTOM(key,range,indexRow)                           
+function  HLOOKUP_CUSTOM(key, range, rowNum) {
+var vals=range.getValues()[0];
+for(var i=0;i<vals.length;i++){
+if(vals[i]===key) return range.getValues()[rowNum-1][i];
+}
+return '#N/A';
+}
+Row lookup.
+MATCH_ALL(val,range)                           
+function  MATCH_ALL(val, range) {
+var res=[];
+range.getValues().flat().forEach((x,i)=>{ if(x===val) res.push(i+1); });
+return res;
+}
+All matching positions.
+INDEX_MATCH(search,lookupRange,returnRange)                           
+function  INDEX_MATCH(search, lookupRange, returnRange) {
+var keys=lookupRange.getValues().flat();
+var idx=keys.indexOf(search);
+return idx>=0? returnRange.getValues().flat()[idx] : '#N/A';
+}
+INDEX/MATCH combination.
+UNIQUE_VALUES(range)                          
+ function  UNIQUE_VALUES(range) {
+return [...new Set(range.getValues().flat())];
+}
+Unique list.
+COUNT_IF_RANGE(range,crit)                          
+ function  COUNT_IF_RANGE(range, crit) {
+return range.getValues().flat().filter(x=>x==crit).length;
+}
+Count matching.
+SUM_IF_RANGE(range,crit,sumRange)                           
+function  SUM_IF_RANGE(range, crit, sumRange) {
+var keys=range.getValues(), vals=sumRange.getValues();
+var total=0;
+for(var i=0;i<keys.length;i++){
+if(keys[i][0]==crit) total+=vals[i][0];
+}
+return total;
+}
+Conditional sum.
+AVERAGE_IF_RANGE(range,crit,avgRange)                           
+function  AVERAGE_IF_RANGE(range, crit, avgRange) {
+var keys=range.getValues(), vals=avgRange.getValues();
+var sum=0,count=0;
+for(var i=0;i<keys.length;i++){
+if(keys[i][0]==crit){ sum+=vals[i][0]; count++; }
+}
+return count? sum/count : '#DIV/0!';
+}
+Conditional average.
+GET_COLUMN(range,colIndex)                           
+function  GET_COLUMN(range, col) {
+return range.getValues().map(r=>r[col-1]);
+}
+Extract column.
+GET_ROW(range,rowIndex)                          
+ function  GET_ROW(range, row) {
+return range.getValues()[row-1];
+}
+Extract row.
+5. Array & Range Processing (41–50)
+FLATTEN_RANGE(input)                           
+function  FLATTEN_RANGE(input) {
+return input.reduce((a,b)=>a.concat(b),[]);
+}
+2D→1D.
+TRANSPOSE_CUSTOM(input)                          
+ function  TRANSPOSE_CUSTOM(a) {
+return a[0].map((_,i)=> a.map(r=>r[i]));
+}
+Transpose matrix.
+FILTER_BLANKS(input)                           
+function  FILTER_BLANKS(input) {
+return input.flat().filter(x=>x!=='');
+}
+Remove blanks.
+MAP_RANGE(input,fnName)                           
+function  MAP_RANGE(input, fnName) {
+var fn=this[fnName];
+return input.map(r=> r.map(c=> fn(c)));
+}
+Apply named function to each cell.
+REDUCE_SUM(input)                           
+function  REDUCE_SUM(input) {
+return input.flat().reduce((a,b)=>a+b,0);
+}
+Sum of all.
+SLICE_RANGE(input,start,len)                           
+function  SLICE_RANGE(input, start, len) {
+return input.flat().slice(start, start+len);
+}
+Slice flattened.
+CHUNK_RANGE(input, size)                          
+ function  CHUNK_RANGE(input, size) {
+var flat=input.flat(), out=[];
+for(var i=0;i<flat.length;i+=size) out.push(flat.slice(i,i+size));
+return out;
+}
+Chunk into rows.
+ZIP_RANGES(a,b) 
+function  ZIP_RANGES(a, b) {
+return a.map((r,i)=> r.concat(b[i]||[]));
+}
+Concatenate side‑by‑side.
+ROTATE_MATRIX(input) 
+function  ROTATE_MATRIX(m) {
+return m[0].map((_,i)=> m.map(r=>r[i]).reverse());
+}
+Rotate 90° CW.
+SHIFT_RANGE(input,rows,cols) 
+function  SHIFT_RANGE(input, rows, cols) {
+var out=Array(input.length+rows).fill().map(()=>[]);
+for(var r=0;r<input.length;r++){
+for(var c=0;c<input[0].length;c++){
+out[r+rows][c+cols]=input[r][c];
+}
+}
+return out;
+}
+Offset block.
+6. Financial Calculations (51–60)
+COMPOUND_INTEREST(P,r,t,y)
+ function  COMPOUND_INTEREST(P, r, t, y) {
+return P * Math.pow(1 + r/t, t*y);
+}
+Compound interest.
+PV(fv,r,n)
+function  PV(fv, r, n) {
+return fv / Math.pow(1+r, n);
+}
+Present value.
+FV(pv,r,n)
+ function  FV(pv, r, n) {
+return pv * Math.pow(1+r, n);
+}
+Future value.
+PMT(r,n,pv) 
+function  PMT(r, n, pv) {
+return (r * pv) / (1 - Math.pow(1+r, -n));
+}
+Loan payment.
+NPV_SIMPLE(rate, values) 
+function  NPV_SIMPLE(rate, values) {
+return values.flat().reduce((sum,v,i)=> sum + v/Math.pow(1+rate,i+1),0);
+}
+Net present value.
+IRR_SIMPLE(values)
+ function  IRR_SIMPLE(values) {
+var rate=0.1, iter=0;
+while(iter<1000){
+var npv=values.reduce((s,v,i)=>s+v/Math.pow(1+rate,i),0);
+if(Math.abs(npv)<1e-6) break;
+rate-=npv/100;
+iter++;
+}
+return rate;
+}
+Internal rate of return.
+DURATION_LINEAR(cf, times) 
+function  DURATION_LINEAR(cashFlows, times) {
+var cf=cashFlows.flat(), t=times.flat();
+var num=cf.reduce((s,cf,i)=> s+cf*t[i],0);
+var den=cf.reduce((s,cf)=>s+cf,0);
+return num/den;
+}
+Macaulay duration.
+YIELD_SIMPLE(pv,fv,n)
+ function  YIELD_SIMPLE(pv, fv, n) {
+return Math.pow(fv/pv,1/n)-1;
+}
+Yield rate.
+AMORTIZATION_PAYMENT(P,r,n) 
+function  AMORTIZATION_PAYMENT(P, r, n) {
+return PMT(r, n, P);
+}
+Alias for PMT.
+ROI_PERCENT(gain,cost) 
+function  ROI_PERCENT(gain, cost) {
+return (gain - cost)/cost * 100;
+}
+Return on investment %.
+7. Statistics & Aggregation (61–70)
+MEDIAN_CUSTOM(input) 
+function  MEDIAN_CUSTOM(input) {
+var a=input.flat().sort((x,y)=>x-y);
+var m=Math.floor(a.length/2);
+return a.length%2?a[m]:(a[m-1]+a[m])/2;
+}
+Median.
+MODE_CUSTOM(input)
+ function  MODE_CUSTOM(input) {
+var counts={}, max=0, mode=null;
+input.flat().forEach(x=>{counts[x]=(counts[x]||0)+1; if(counts[x]>max){max=counts[x];mode=x;}});
+return mode;
+}
+Most frequent.
+STDEV_POP_CUSTOM(input)
+ function  STDEV_POP_CUSTOM(input) {
+var a=input.flat(), m=a.reduce((s,x)=>s+x,0)/a.length;
+return Math.sqrt(a.reduce((s,x)=>s+Math.pow(x-m,2),0)/a.length);
+}
+Population stdev.
+VARIANCE_CUSTOM(input) 
+function  VARIANCE_CUSTOM(input) {
+var a=input.flat(), m=a.reduce((s,x)=>s+x,0)/a.length;
+return a.reduce((s,x)=>s+Math.pow(x-m,2),0)/a.length;
+}
+Population variance.
+PERCENTILE_CUSTOM(input,p)
+ function  PERCENTILE_CUSTOM(input,p) {
+var a=input.flat().sort((x,y)=>x-y), idx=(a.length-1)*p;
+var lo=Math.floor(idx), hi=Math.ceil(idx);
+return a[lo] + (a[hi]-a[lo])*(idx-lo);
+}
+p‑th percentile.
+RANK_CUSTOM(val,input)
+ function  RANK_CUSTOM(val,input){
+var a=input.flat().sort((x,y)=>y-x);
+return a.indexOf(val)+1;
+}
+Rank descending.
+CORRELATION(aRange,bRange)
+ function  CORRELATION(aRange, bRange){
+var x=aRange.flat(), y=bRange.flat(), n=x.length;
+var mx=x.reduce((s,v)=>s+v,0)/n, my=y.reduce((s,v)=>s+v,0)/n;
+var num=x.map((v,i)=> (v-mx)*(y[i]-my)).reduce((s,v)=>s+v,0);
+var den=Math.sqrt(x.map(v=>Math.pow(v-mx,2)).reduce((s,v)=>s+v,0)* y.map(v=>Math.pow(v-my,2)).reduce((s,v)=>s+v,0));
+return num/den;
+}
+Pearson r.
+COVARIANCE(aRange,bRange)
+ function  COVARIANCE(aRange, bRange){
+var x=aRange.flat(), y=bRange.flat(), n=x.length;
+var mx=x.reduce((s,v)=>s+v,0)/n, my=y.reduce((s,v)=>s+v,0)/n;
+return x.map((v,i)=> (v-mx)*(y[i]-my)).reduce((s,v)=>s+v,0)/n;
+}
+Covariance.
+Z_SCORE(val,input)
+ function  Z_SCORE(val,input){
+var a=input.flat(), m=a.reduce((s,v)=>s+v,0)/a.length;
+var sd=Math.sqrt(a.reduce((s,v)=>s+Math.pow(v-m,2),0)/a.length);
+return (val-m)/sd;
+}
+Standard score.
+DIST_BINOMIAL(n,p,k)
+ function  DIST_BINOMIAL(n,p,k){
+function C(n,k){if(k>n) return 0; var res=1; for(var i=1;i<=k;i++) res=res*(n-i+1)/i; return res;}
+return C(n,k)*Math.pow(p,k)*Math.pow(1-p,n-k);
+}
+Binomial probability.
+8. Conditional Logic (71–80)
+IF_ELSE(cond,t,f)
+ function  IF_ELSE(cond, t, f) {
+return cond ? t : f;
+}
+Basic IF.
+SWITCH_CASE(val, cases, defaults)
+ function  SWITCH_CASE(val, cases, defaults) {
+var cs=cases.getValues();
+for(var i=0;i<cs.length;i++){
+if(cs[i][0]===val) return cs[i][1];
+}
+return defaults;
+}
+Simple switch.
+IFS_CUSTOM(...pairs)
+ function  IFS_CUSTOM() {
+for(var i=0;i<arguments.length;i+=2){
+if(arguments[i]) return arguments[i+1];
+}
+return '#N/A';
+}
+Multiple IFs.
+AND_CUSTOM(...args)
+ function  AND_CUSTOM() {
+return Array.from(arguments).every(Boolean);
+}
+Logical AND.
+OR_CUSTOM(...args)
+ function  OR_CUSTOM() {
+return Array.from(arguments).some(Boolean);
+}
+Logical OR.
+NOT_CUSTOM(x)
+ function  NOT_CUSTOM(x) {
+return !x;
+}
+Logical NOT.
+IFERROR_CUSTOM(expr, alt)
+ function  IFERROR_CUSTOM(expr, alt) {
+try { return expr; } catch(e){ return alt; }
+}
+Catch errors.
+CHOOSE_CUSTOM(index, ...options)
+ function  CHOOSE_CUSTOM(index) {
+var opts=Array.prototype.slice.call(arguments,1);
+return opts[index-1]||'#N/A';
+}
+Choose by index.
+XLOOKUP_BASIC(key,lookup,returnRange)
+ function  XLOOKUP_BASIC(key, lookup, ret) {
+var l=lookup.flat(), r=ret.flat();
+var i=l.indexOf(key);
+return i>=0? r[i] : '#N/A';
+}
+Basic XLOOKUP.
+SELECT_CASE(val, cases, defaultVal) 
+function  SELECT_CASE(val, cases, defaultVal) {
+var cs=cases.getValues();
+for(var i=0;i<cs.length;i++){
+if(cs[i][0]===val) return cs[i][1];
+}
+return defaultVal;
+}
+Another switch style.
+9. External APIs & Integration (81–90)
+GET_JSON_FIELD(url,field) 
+function  GET_JSON_FIELD(url, field) {
+var res=UrlFetchApp.fetch(url);
+var d=JSON.parse(res.getContentText());
+return d[field];
+}
+FetchJSON field.
+GET_CRYPTO_PRICE(sym) 
+function  GET_CRYPTO_PRICE(sym) {
+var url='https://api.coingecko.com/api/v3/simple/price?ids='+sym+'&vs_currencies=usd';
+var d=JSON.parse(UrlFetchApp.fetch(url).getContentText());
+return d[sym].usd;
+}
+Crypto price USD.
+GET_WEATHER_TEMP(city) 
+function  GET_WEATHER_TEMP(city) {
+var key='YOUR_API_KEY';
+var url='https://api.openweathermap.org/data/2.5/weather?q='+city+'&appid='+key+'&units=metric';
+var d=JSON.parse(UrlFetchApp.fetch(url).getContentText());
+return d.main.temp;
+}
+Current temp.
+POST_JSON_PAYLOAD(url,payload) 
+function  POST_JSON_PAYLOAD(url, payload) {
+var opts={method:'post',contentType:'application/json',payload:JSON.stringify(payload)};
+return UrlFetchApp.fetch(url,opts).getContentText();
+}
+POST JSON.
+GET_SHEET_BY_ID(id,name)
+function  GET_SHEET_BY_ID(id, name) {
+return SpreadsheetApp.openById(id).getSheetByName(name).getDataRange().getValues();
+}
+Import range from other file.
+CALL_CUSTOM_API(url,params) 
+function  CALL_CUSTOM_API(url, params) {
+var qs=Object.keys(params).map(k=>k+'='+encodeURIComponent(params[k])).join('&');
+return UrlFetchApp.fetch(url+'?'+qs).getContentText();
+}
+GET with params.
+PARSE_XML(xmlString, tag)
+ function  PARSE_XML(xmlString, tag) {
+var doc=XmlService.parse(xmlString);
+return doc.getRootElement().getChild(tag).getText();
+}
+Extract XML tag.
+IMPORT_CSV_URL(url) 
+function  IMPORT_CSV_URL(url) {
+var txt=UrlFetchApp.fetch(url).getContentText();
+return Utilities.parseCsv(txt);
+}
+Import CSV.
+GEO_CODE_ADDRESS(addr) 
+function  GEO_CODE_ADDRESS(addr) {
+var res=Maps.newGeocoder().geocode(addr);
+return res.results[0].geometry.location.lat + ',' + res.results[0].geometry.location.lng;
+}
+Lat,lng.
+GET_GOOGLE_ANALYTICS(viewId,start,end,metric) 
+function  GET_GOOGLE_ANALYTICS(viewId, startDate, endDate, metric) {
+var resp=Analytics.Data.Ga.get('ga:'+viewId, startDate, endDate, 'ga:'+metric);
+return resp.rows;
+}
+GA metrics.
+10. Utilities & Helpers (91–100)
+RANDARRAY_CUSTOM(rows,cols) 
+function  RANDARRAY_CUSTOM(rows, cols) {
+var o=[];
+for(var r=0;r<rows;r++){
+var row=[];
+for(var c=0;c<cols;c++) row.push(Math.random());
+o.push(row);
+}
+return o;
+}
+Random matrix.
+UUID_GENERATE() 
+function  UUID_GENERATE() {
+return Utilities.getUuid();
+}
+GUID.
+CRYPT_HASH(text,algo)
+ function  CRYPT_HASH(text, algo) {
+return Utilities.computeDigest(Utilities.DigestAlgorithm[algo], text)
+.map(b=>('0'+(b<0?b+256:b).toString(16)).slice(-2)).join('');
+}
+Hash (MD5,SHA_1,SHA_256).
+PARSE_QUERY_STRING(qs) 
+function  PARSE_QUERY_STRING(qs) {
+return qs.split('&').reduce((o,p)=>{var kv=p.split('=');o[kv[0]]=decodeURIComponent(kv[1]);return o;},{});
+}
+To object.
+BUILD_QUERY_STRING(obj) 
+function  BUILD_QUERY_STRING(obj) {
+return Object.keys(obj).map(k=>k+'='+encodeURIComponent(obj[k])).join('&');
+}
+From object.
+TIMESTAMP_NOW() 
+function  TIMESTAMP_NOW() {
+return new Date();
+}
+Current date/time.
+CLIP_VALUE(x,min,max) 
+function  CLIP_VALUE(x, min, max) {
+return x < min ? min : x > max ? max : x;
+}
+Clamp.
+DEBOUNCE_RANGE(fnName, range, ms) 
+function  DEBOUNCE_RANGE(fnName, range, ms) {
+var cache=CacheService.getScriptCache();
+var key=range.getA1Notation();
+if(!cache.get(key)){
+cache.put(key,'1',ms/1000);
+return this[fnName](range);
+}
+return null;
+}
+Rate‑limit calls.
+THROTTLE_FUNCTION(fnName, ms)
+function THROTTLE_FUNCTION(fnName, ms) {
+var prop='last_'+fnName;
+var now=Date.now();
+if(!this[prop] || now-this[prop]>ms){
+this[prop]=now;
+return this[fnName]();
+}
+return null;
+}
+Throttle no‑args fn.
+LOG_TO_SHEET(sheetName, message) 
+function LOG_TO_SHEET(sheetName, message) {
+  var ss = SpreadsheetApp.getActive();
+  var sh = ss.getSheetByName(sheetName) || ss.insertSheet(sheetName);
+  sh.appendRow([new Date(), message]);
+}
+Simple logger.
