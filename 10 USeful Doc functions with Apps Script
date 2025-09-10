@@ -1,7 +1,7 @@
 /***********************
  * Doc Power Tools
  * Google Docs Apps Script — single-file utility pack
- * Author: You
+ * Author: Laurence Svekis
  ***********************/
 
 function onOpen() {
