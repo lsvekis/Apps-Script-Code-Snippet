@@ -1,0 +1,537 @@
+/***********************
+ * Doc Power Tools
+ * Google Docs Apps Script — single-file utility pack
+ * Author: You
+ ***********************/
+
+function onOpen() {
+  const ui = DocumentApp.getUi();
+  ui.createMenu('Doc Power Tools')
+    .addItem('1) Insert / Refresh Table of Contents', 'ppt_insertOrRefreshToc')
+    .addItem('2) Find & Replace (advanced)', 'ppt_findReplaceDialog')
+    .addItem('3) Clean Formatting', 'ppt_cleanFormatting')
+    .addItem('4) Convert Markdown (#, ##, ###) → Headings', 'ppt_markdownToHeadings')
+    .addItem('5) Quick Header & Footer', 'ppt_headerFooterQuick')
+    .addItem('6) Save PDF to Drive (+optional email)', 'ppt_savePdfWithEmail')
+    .addItem('7) Mail Merge from Google Sheet', 'ppt_mailMergeFromSheetDialog')
+    .addItem('8) Insert Image from URL at Cursor', 'ppt_insertImageFromUrl')
+    .addItem('9) Split Doc by Heading 1', 'ppt_splitByHeading1')
+    .addItem('10) Show Document Stats', 'ppt_showStats')
+    .addToUi();
+}
+
+/* ---------------------------------------------
+ * 1) Insert / Refresh Table of Contents at top
+ * --------------------------------------------- */
+function ppt_insertOrRefreshToc() {
+  const doc = DocumentApp.getActiveDocument();
+  const body = doc.getBody();
+
+  // 0) Remove any native ToCs
+  for (let i = body.getNumChildren() - 1; i >= 0; i--) {
+    const el = body.getChild(i);
+    if (el.getType() === DocumentApp.ElementType.TABLE_OF_CONTENTS) {
+      body.removeChild(el);
+    }
+  }
+
+  // 1) Remove previous MANUAL ToC block (between markers) and its bookmarks
+  removeManualTocBlock_(body);
+  removePreviousTocBookmarks_(doc);
+
+  // 2) Try native ToC first if your domain supports it
+  let nativeWorked = false;
+  try {
+    if (typeof body.appendTableOfContents === 'function') {
+      const tEnum = DocumentApp.TableOfContentsType || {};
+      const type = tEnum.FLAT || tEnum.LINK || tEnum.PAGE || tEnum.PAGE_NUMBER;
+      if (type) body.appendTableOfContents(type); else body.appendTableOfContents();
+      nativeWorked = true;
+      body.insertParagraph(1, '').setSpacingAfter(10);
+    }
+  } catch (_) {}
+
+  if (nativeWorked) {
+    DocumentApp.getUi().alert('Native Table of Contents inserted at the top.');
+    return;
+  }
+
+  // 3) Manual ToC fallback (works everywhere)
+  const startIdx = 0;
+  body.insertParagraph(startIdx, '[[PPT_TOC_START]]')
+      .setForegroundColor('#ffffff').setFontSize(1);
+
+  body.insertParagraph(startIdx + 1, 'Table of Contents')
+      .setHeading(DocumentApp.ParagraphHeading.HEADING1);
+
+  // Build ToC items and store the bookmark IDs we create so we can remove them next time
+  const items = buildHeadingIndex_(doc); // [{text, level, bookmarkId}]
+  saveTocBookmarks_(items.map(x => x.bookmarkId));
+
+  let insertAt = startIdx + 2;
+  items.forEach(item => {
+    const li = body.insertListItem(insertAt++, item.text);
+    li.setNestingLevel(Math.max(0, item.level - 1));
+    const t = li.editAsText();
+    const url = doc.getUrl() + '#bookmark=' + item.bookmarkId;
+    t.setLinkUrl(0, t.getText().length - 1, url);
+  });
+
+  body.insertParagraph(insertAt++, '[[PPT_TOC_END]]')
+      .setForegroundColor('#ffffff').setFontSize(1);
+  body.insertParagraph(insertAt, '').setSpacingAfter(10);
+
+  DocumentApp.getUi().alert('Manual Table of Contents inserted at the top.');
+}
+
+// Remove our previous manual ToC block (between markers)
+function removeManualTocBlock_(body) {
+  let start = -1, end = -1;
+  for (let i = 0; i < body.getNumChildren(); i++) {
+    const el = body.getChild(i);
+    if (el.getType() !== DocumentApp.ElementType.PARAGRAPH) continue;
+    const txt = el.asParagraph().getText();
+    if (txt === '[[PPT_TOC_START]]') start = i;
+    if (txt === '[[PPT_TOC_END]]') { end = i; break; }
+  }
+  if (start >= 0 && end >= start) {
+    for (let i = end; i >= start; i--) body.removeChild(body.getChild(i));
+  }
+}
+
+// Build ToC: scan headings, create a new bookmark for each heading, return entries
+// Build ToC: scan headings, create a new bookmark for each heading, return entries
+function buildHeadingIndex_(doc) {
+  const body = doc.getBody();
+  const items = [];
+
+  for (let i = 0; i < body.getNumChildren(); i++) {
+    const el = body.getChild(i);
+    if (el.getType() !== DocumentApp.ElementType.PARAGRAPH) continue;
+
+    const p = el.asParagraph();
+    const level = headingLevel_(p.getHeading());
+    if (!level) continue;
+
+    const text = p.getText().trim();
+    if (!text) continue;
+
+    // Create a bookmark at the start of the paragraph's text
+    // editAsText() guarantees a Text element; offset 0 = start of paragraph
+    const textElem = p.editAsText();
+    if (!textElem) continue; // safety: skip if no text
+
+    const pos = doc.newPosition(textElem, 0);
+    const bm = doc.addBookmark(pos);
+
+    items.push({ text: text, level: level, bookmarkId: bm.getId() });
+  }
+  return items;
+}
+
+
+// Map heading enums to numeric levels
+function headingLevel_(h) {
+  switch (h) {
+    case DocumentApp.ParagraphHeading.HEADING1: return 1;
+    case DocumentApp.ParagraphHeading.HEADING2: return 2;
+    case DocumentApp.ParagraphHeading.HEADING3: return 3;
+    case DocumentApp.ParagraphHeading.HEADING4: return 4;
+    case DocumentApp.ParagraphHeading.HEADING5: return 5;
+    case DocumentApp.ParagraphHeading.HEADING6: return 6;
+    default: return 0;
+  }
+}
+
+// Remove ONLY the bookmarks we created last time (tracked in Doc Properties)
+function removePreviousTocBookmarks_(doc) {
+  const props = PropertiesService.getDocumentProperties();
+  const idsJson = props.getProperty('PPT_TOC_BM_IDS');
+  if (!idsJson) return;
+
+  const ids = JSON.parse(idsJson);
+  const bookmarks = doc.getBookmarks() || [];
+
+  ids.forEach((id) => {
+    const bm = bookmarks.find(b => b.getId && b.getId() === id);
+    if (bm && typeof bm.remove === 'function') {
+      bm.remove(); // <- correct way to delete a bookmark
+    }
+  });
+
+  props.deleteProperty('PPT_TOC_BM_IDS');
+}
+
+// Save the bookmark IDs we just created so we can remove them on the next run
+function saveTocBookmarks_(ids) {
+  const props = PropertiesService.getDocumentProperties();
+  props.setProperty('PPT_TOC_BM_IDS', JSON.stringify(ids || []));
+}
+
+
+
+
+
+/* ---------------------------------------------------
+ * 2) Find & Replace with options (regex, whole word)
+ * --------------------------------------------------- */
+function ppt_findReplaceDialog() {
+  const html = HtmlService.createHtmlOutput(`
+    <div style="font-family: Arial, sans-serif; padding: 12px;">
+      <h3>Find & Replace (Advanced)</h3>
+      <label>Find (regex supported): <br/>
+        <input style="width:100%" id="find" placeholder="e.g. (?i)\\bcolour\\b"/>
+      </label><br/><br/>
+      <label>Replace with: <br/>
+        <input style="width:100%" id="replace" placeholder="color"/>
+      </label><br/><br/>
+      <label><input type="checkbox" id="whole"/> Whole word (wraps \\b)</label><br/>
+      <label><input type="checkbox" id="casei" checked/> Case-insensitive ((?i))</label><br/><br/>
+      <button onclick="google.script.run.withSuccessHandler(close).ppt_findReplace(
+        document.getElementById('find').value,
+        document.getElementById('replace').value,
+        document.getElementById('whole').checked,
+        document.getElementById('casei').checked
+      )">Run</button>
+      <button onclick="google.script.host.close()">Close</button>
+    </div>
+  `).setWidth(420).setHeight(300);
+  DocumentApp.getUi().showModalDialog(html, 'Find & Replace');
+}
+
+function ppt_findReplace(find, replace, wholeWord, caseInsensitive) {
+  if (!find) throw new Error('Find pattern is required.');
+  let pattern = find;
+
+  if (wholeWord) {
+    if (!pattern.startsWith('\\b')) pattern = '\\b' + pattern;
+    if (!pattern.endsWith('\\b')) pattern = pattern + '\\b';
+  }
+  if (caseInsensitive && !pattern.startsWith('(?i)')) {
+    pattern = '(?i)' + pattern;
+  }
+
+  const body = DocumentApp.getActiveDocument().getBody();
+  const before = body.getText();
+  body.replaceText(pattern, replace ?? '');
+  const after = body.getText();
+  const delta = Math.max(0, (before.length - after.length)) + Math.max(0, (after.length - before.length));
+  DocumentApp.getUi().alert('Find & Replace completed.\nPattern: ' + pattern);
+}
+
+/* -----------------------------------
+ * 3) Clean Formatting
+ *    - Trim trailing spaces
+ *    - Collapse multiple blank lines
+ *    - Collapse multiple spaces between words
+ * ----------------------------------- */
+function ppt_cleanFormatting() {
+  const body = DocumentApp.getActiveDocument().getBody();
+  // Work paragraph by paragraph to preserve styles as much as practical
+  for (let i = 0; i < body.getNumChildren(); i++) {
+    const el = body.getChild(i);
+    if (el.getType() === DocumentApp.ElementType.PARAGRAPH) {
+      const p = el.asParagraph();
+      const t = p.getText();
+      let cleaned = t
+        .replace(/[ \\t]+$/g, '')     // trailing spaces/tabs
+        .replace(/ {2,}/g, ' ');      // multiple spaces to one
+      if (cleaned !== t) {
+        p.setText(cleaned);
+      }
+    }
+  }
+  // Collapse multiple blank paragraphs
+  // Pass 1: mark consecutive blanks
+  let blanks = 0;
+  for (let i = body.getNumChildren() - 1; i >= 0; i--) {
+    const el = body.getChild(i);
+    if (el.getType() === DocumentApp.ElementType.PARAGRAPH &&
+        el.asParagraph().getText().trim() === '') {
+      blanks++;
+      if (blanks > 1) {
+        body.removeChild(el);
+      }
+    } else {
+      blanks = 0;
+    }
+  }
+  DocumentApp.getUi().alert('Formatting cleaned: spaces and extra blank lines collapsed.');
+}
+
+/* ---------------------------------------------------------
+ * 4) Convert Markdown-style headings → real Docs Headings
+ *    Lines starting with: ###, ##, # (followed by a space)
+ * --------------------------------------------------------- */
+function ppt_markdownToHeadings() {
+  const body = DocumentApp.getActiveDocument().getBody();
+  for (let i = 0; i < body.getNumChildren(); i++) {
+    const el = body.getChild(i);
+    if (el.getType() !== DocumentApp.ElementType.PARAGRAPH) continue;
+    const p = el.asParagraph();
+    const text = p.getText();
+
+    if (/^###\s+/.test(text)) {
+      p.setText(text.replace(/^###\s+/, ''));
+      p.setHeading(DocumentApp.ParagraphHeading.HEADING3);
+    } else if (/^##\s+/.test(text)) {
+      p.setText(text.replace(/^##\s+/, ''));
+      p.setHeading(DocumentApp.ParagraphHeading.HEADING2);
+    } else if (/^#\s+/.test(text)) {
+      p.setText(text.replace(/^#\s+/, ''));
+      p.setHeading(DocumentApp.ParagraphHeading.HEADING1);
+    }
+  }
+  DocumentApp.getUi().alert('Markdown headings converted.');
+}
+
+/* ---------------------------------------------
+ * 5) Quick Header & Footer (title, author, date)
+ * --------------------------------------------- */
+function ppt_headerFooterQuick() {
+  const doc = DocumentApp.getActiveDocument();
+  const props = PropertiesService.getDocumentProperties();
+
+  const defaultAuthor = Session.getActiveUser().getEmail() || '';
+  const author = props.getProperty('PPT_AUTHOR') || defaultAuthor;
+  const tz = Session.getScriptTimeZone();
+  const today = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
+
+  // --- Header ---
+  let header = doc.getHeader();
+  if (!header) header = doc.addHeader();
+  header.clear(); // HeaderSection, not a Body
+  header.appendParagraph(doc.getName()).setBold(true);
+
+  // --- Footer ---
+  let footer = doc.getFooter();
+  if (!footer) footer = doc.addFooter();
+  footer.clear(); // FooterSection, not a Body
+  footer.appendParagraph('Author: ' + author);
+  footer.appendParagraph('Date: ' + today);
+
+  DocumentApp.getUi().alert('Header & Footer inserted.');
+}
+
+
+/* -------------------------------------------
+ * 6) Save as PDF to Drive (+ optional email)
+ * ------------------------------------------- */
+function ppt_savePdfWithEmail() {
+  const ui = DocumentApp.getUi();
+  const res = ui.prompt('Email PDF to (leave blank to skip):', ui.ButtonSet.OK_CANCEL);
+  if (res.getSelectedButton() !== ui.Button.OK) return;
+
+  const email = (res.getResponseText() || '').trim();
+  const pdfFile = ppt_savePdf_();
+
+  if (email) {
+    GmailApp.sendEmail(
+      email,
+      'PDF: ' + pdfFile.getName(),
+      'Attached is the PDF export.',
+      {attachments: [pdfFile.getAs(MimeType.PDF)]}
+    );
+    ui.alert('Saved to Drive and emailed PDF to ' + email);
+  } else {
+    ui.alert('Saved PDF to Drive: ' + pdfFile.getName());
+  }
+}
+
+function ppt_savePdf_() {
+  const doc = DocumentApp.getActiveDocument();
+  doc.saveAndClose();
+  const file = DriveApp.getFileById(doc.getId());
+  const blob = file.getAs(MimeType.PDF);
+  const stampedName = file.getName() + ' - ' +
+    Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd_HHmm') + '.pdf';
+  const pdf = DriveApp.createFile(blob).setName(stampedName);
+  DocumentApp.openById(doc.getId()); // reopen for continued editing
+  return pdf;
+}
+
+/* --------------------------------------------
+ * 7) Mail Merge from Google Sheet
+ *    - Active Doc is the template with {{Placeholders}}
+ *    - Prompts for Sheet ID and Sheet Name
+ *    - Creates a copy per row and replaces placeholders
+ * -------------------------------------------- */
+function ppt_mailMergeFromSheetDialog() {
+  const html = HtmlService.createHtmlOutput(`
+    <div style="font-family: Arial, sans-serif; padding: 12px;">
+      <h3>Mail Merge from Sheet</h3>
+      <label>Google Sheet ID:<br/><input id="sid" style="width:100%" placeholder="1AbC..."/></label><br/><br/>
+      <label>Sheet name:<br/><input id="sname" style="width:100%" placeholder="Sheet1"/></label><br/><br/>
+      <label>Output folder ID (optional):<br/><input id="fid" style="width:100%" placeholder="leave blank to root"/></label><br/><br/>
+      <button onclick="google.script.run.withSuccessHandler(alertAndClose).ppt_mailMergeFromSheet(
+        document.getElementById('sid').value,
+        document.getElementById('sname').value,
+        document.getElementById('fid').value
+      )">Run</button>
+      <button onclick="google.script.host.close()">Close</button>
+      <script>
+        function alertAndClose(msg){ alert(msg); google.script.host.close(); }
+      </script>
+    </div>
+  `).setWidth(460).setHeight(340);
+  DocumentApp.getUi().showModalDialog(html, 'Mail Merge from Sheet');
+}
+
+function ppt_mailMergeFromSheet(sheetId, sheetName, folderId) {
+  if (!sheetId || !sheetName) throw new Error('Sheet ID and Sheet name are required.');
+  const ss = SpreadsheetApp.openById(sheetId);
+  const sh = ss.getSheetByName(sheetName);
+  if (!sh) throw new Error('Sheet not found: ' + sheetName);
+
+  const values = sh.getDataRange().getValues();
+  if (values.length < 2) throw new Error('No data rows found.');
+
+  const headers = values[0];
+  const rows = values.slice(1);
+
+  const templateDoc = DocumentApp.getActiveDocument();
+  const templateId = templateDoc.getId();
+  const folder = folderId ? DriveApp.getFolderById(folderId) : DriveApp.getRootFolder();
+
+  let count = 0;
+  rows.forEach((row, idx) => {
+    const map = {};
+    headers.forEach((h, i) => map[h] = row[i]);
+    const copy = DriveApp.getFileById(templateId).makeCopy(templateDoc.getName() + ' - ' + (map['Name'] || ('Row ' + (idx+2))), folder);
+    const doc = DocumentApp.openById(copy.getId());
+    const body = doc.getBody();
+
+    Object.keys(map).forEach(key => {
+      const pattern = '{{\\s*' + escapeRegExp_(String(key)) + '\\s*}}';
+      body.replaceText(pattern, String(map[key] ?? ''));
+    });
+
+    doc.saveAndClose();
+    count++;
+  });
+
+  return count + ' document(s) created in: ' + (folderId ? ('folder ' + folderId) : 'My Drive');
+}
+
+function escapeRegExp_(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/* --------------------------------------------
+ * 8) Insert Image from URL at Cursor (width px)
+ * -------------------------------------------- */
+function ppt_insertImageFromUrl() {
+  const ui = DocumentApp.getUi();
+  const urlRes = ui.prompt('Image URL:', ui.ButtonSet.OK_CANCEL);
+  if (urlRes.getSelectedButton() !== ui.Button.OK) return;
+  const url = urlRes.getResponseText().trim();
+  if (!url) return;
+
+  const widthRes = ui.prompt('Desired width in pixels (leave blank to keep original):', ui.ButtonSet.OK_CANCEL);
+  if (widthRes.getSelectedButton() !== ui.Button.OK) return;
+  const widthStr = (widthRes.getResponseText() || '').trim();
+
+  const cursor = DocumentApp.getActiveDocument().getCursor();
+  if (!cursor) {
+    ui.alert('Place the cursor where you want the image.');
+    return;
+  }
+
+  const blob = UrlFetchApp.fetch(url).getBlob();
+  const img = cursor.insertInlineImage(blob);
+  if (widthStr) {
+    const w = parseInt(widthStr, 10);
+    if (!isNaN(w) && w > 0) {
+      const aspect = img.getHeight() ? (img.getHeight() / img.getWidth()) : 0;
+      img.setWidth(w);
+      if (aspect) img.setHeight(Math.round(w * aspect));
+    }
+  }
+  ui.alert('Image inserted.');
+}
+
+/* --------------------------------------------
+ * 9) Split Doc into new Docs by Heading 1
+ * -------------------------------------------- */
+function ppt_splitByHeading1() {
+  const srcDoc = DocumentApp.getActiveDocument();
+  const srcBody = srcDoc.getBody();
+  const total = srcBody.getNumChildren();
+
+  // Accumulators
+  let currentDoc = null;
+  let created = 0;
+
+  for (let i = 0; i < total; i++) {
+    const el = srcBody.getChild(i);
+    const type = el.getType();
+
+    // Detect new section start: Heading 1
+    if (type === DocumentApp.ElementType.PARAGRAPH &&
+        el.asParagraph().getHeading() === DocumentApp.ParagraphHeading.HEADING1) {
+
+      // Start a new doc
+      const title = el.asParagraph().getText().trim() || 'Section';
+      currentDoc = DocumentApp.create(srcDoc.getName() + ' - ' + title);
+      created++;
+      // Add the heading itself first
+      currentDoc.getBody().appendParagraph(title).setHeading(DocumentApp.ParagraphHeading.HEADING1);
+      continue; // Skip copying the original heading paragraph (already added)
+    }
+
+    // Copy subsequent content into the current section doc
+    if (currentDoc) {
+      const copy = el.copy();
+      // Append based on element type for best fidelity
+      const destBody = currentDoc.getBody();
+      appendElement_(destBody, copy);
+    }
+  }
+
+  DocumentApp.getUi().alert('Split complete. Created ' + created + ' document(s).');
+}
+
+function appendElement_(destBody, el) {
+  const type = el.getType();
+  switch (type) {
+    case DocumentApp.ElementType.PARAGRAPH:
+      destBody.appendParagraph(el.asParagraph());
+      break;
+    case DocumentApp.ElementType.TABLE:
+      destBody.appendTable(el.asTable());
+      break;
+    case DocumentApp.ElementType.LIST_ITEM:
+      destBody.appendListItem(el.asListItem());
+      break;
+    case DocumentApp.ElementType.PAGE_BREAK:
+      destBody.appendPageBreak(el.asPageBreak());
+      break;
+    case DocumentApp.ElementType.HORIZONTAL_RULE:
+      destBody.appendHorizontalRule();
+      break;
+    case DocumentApp.ElementType.INLINE_IMAGE:
+      destBody.appendImage(el.asInlineImage());
+      break;
+    default:
+      // Fallback: try appending as paragraph text
+      destBody.appendParagraph(el.getText ? el.getText() : '');
+  }
+}
+
+/* --------------------------------------------
+ * 10) Document Stats (word/char) + reading time
+ * -------------------------------------------- */
+function ppt_showStats() {
+  const body = DocumentApp.getActiveDocument().getBody();
+  const text = body.getText();
+  const words = (text.match(/\b[\p{L}\p{N}’'-]+\b/gu) || []).length; // handles words incl. unicode
+  const chars = text.replace(/\s/g, '').length;
+  const wpm = 200; // average reading speed
+  const minutes = Math.max(1, Math.round(words / wpm));
+  const msg = `Words: ${words}\nCharacters (no spaces): ${chars}\nEstimated reading time: ${minutes} min`;
+  DocumentApp.getUi().alert('Document Stats', msg, DocumentApp.getUi().ButtonSet.OK);
+}
+
+/* ----- Small helpers / permissions ----- */
+// Add this one-time if you want to set author via menu
+function onInstall() { onOpen(); }
